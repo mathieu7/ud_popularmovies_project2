@@ -41,13 +41,18 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         mMovieGridRecyclerView.addOnScrollListener(new EndlessRecyclerViewScrollListener(mLayoutManager) {
             @Override
             public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
-
+                loadMore(page);
             }
         });
 
         setupActionBar();
         MovieDBAsyncTask task = new MovieDBAsyncTask(this);
         task.execute(MoviePreference.MOST_POPULAR);
+    }
+
+    private void loadMore(final int page) {
+        MovieDBAsyncTask task = new MovieDBAsyncTask(this);
+       // task.execute(MoviePreference.MOST_POPULAR, page + 1);
     }
 
     private void setupActionBar() {

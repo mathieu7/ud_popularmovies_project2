@@ -15,7 +15,7 @@ public class ImageUtils {
     /**
      * The default size image to download.
      */
-    private static final String DEFAULT_SIZE = "w185";
+    private static final String DEFAULT_SIZE = "w342";
 
     /**
      * Return the optimal image size to be downloaded.

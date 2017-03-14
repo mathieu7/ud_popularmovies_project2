@@ -20,7 +20,7 @@ import javax.net.ssl.HttpsURLConnection;
 /**
  * AsyncTask to download the movie results from a specific MovieDB endpoint.
  */
-public class MovieDBAsyncTask extends AsyncTask<MoviePreference, Void, MovieDBAsyncTask.Result> {
+public class MovieDBAsyncTask extends AsyncTask<String, Void, MovieDBAsyncTask.Result> {
 
     /**
      * Result passed back to UI Thread once the task is completed or cancelled.
@@ -60,12 +60,11 @@ public class MovieDBAsyncTask extends AsyncTask<MoviePreference, Void, MovieDBAs
      * Defines work to perform on the background thread.
      */
     @Override
-    protected Result doInBackground(MoviePreference... prefs) {
+    protected Result doInBackground(String... urls) {
         Result result = null;
-        if (!isCancelled() && prefs != null && prefs.length > 0) {
-            MoviePreference moviePreference = prefs[0];
+        if (!isCancelled() && urls != null && urls.length > 0) {
+            String urlString = urls[0];
             try {
-                String urlString = ApiUtils.buildUriString(moviePreference);
                 URL url = new URL(urlString);
                 ApiResponse response = executeDownload(url);
                 if (response != null) {

@@ -1,0 +1,147 @@
+package com.miller.popularmovies.http;
+
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.os.AsyncTask;
+
+import com.google.gson.Gson;
+import com.miller.popularmovies.models.ApiResponse;
+import com.miller.popularmovies.models.MoviePreference;
+import com.miller.popularmovies.utils.ApiUtils;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+
+import javax.net.ssl.HttpsURLConnection;
+
+/**
+ * AsyncTask to download the movie results from a specific MovieDB endpoint.
+ */
+public class MovieDBAsyncTask extends AsyncTask<MoviePreference, Void, MovieDBAsyncTask.Result> {
+
+    /**
+     * Result passed back to UI Thread once the task is completed or cancelled.
+     */
+    public static class Result {
+        public ApiResponse mResponse;
+        public Exception mException;
+        public Result(ApiResponse response) {
+            mResponse = response;
+        }
+        public Result(Exception exception) {
+            mException = exception;
+        }
+    }
+
+    public MovieDBAsyncTask(MovieDBApiCallback callback) {
+        mCallback = callback;
+    }
+    private MovieDBApiCallback mCallback;
+    /**
+     * Cancel background network operation if we do not have network connectivity.
+     */
+    @Override
+    protected void onPreExecute() {
+        if (mCallback != null) {
+            NetworkInfo networkInfo = mCallback.getActiveNetworkInfo();
+            if (networkInfo == null || !networkInfo.isConnected() ||
+                    (networkInfo.getType() != ConnectivityManager.TYPE_WIFI
+                            && networkInfo.getType() != ConnectivityManager.TYPE_MOBILE)) {
+                mCallback.onApiResponse(null);
+                cancel(true);
+            }
+        }
+    }
+
+    /**
+     * Defines work to perform on the background thread.
+     */
+    @Override
+    protected Result doInBackground(MoviePreference... prefs) {
+        Result result = null;
+        if (!isCancelled() && prefs != null && prefs.length > 0) {
+            MoviePreference moviePreference = prefs[0];
+            try {
+                String urlString = ApiUtils.buildUriString(moviePreference);
+                URL url = new URL(urlString);
+                ApiResponse response = executeDownload(url);
+                if (response != null) {
+                    result = new Result(response);
+                } else {
+                    throw new IOException("No response received.");
+                }
+            } catch (Exception e) {
+                result = new Result(e);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Download the content.
+     * @param url
+     * @return
+     * @throws IOException
+     */
+    private ApiResponse executeDownload(final URL url) throws IOException {
+        InputStream stream = null;
+        HttpsURLConnection connection = null;
+        ApiResponse response = null;
+        try {
+            connection = (HttpsURLConnection) url.openConnection();
+            connection.setReadTimeout(3000);
+            connection.setConnectTimeout(3000);
+            connection.setRequestMethod("GET");
+            connection.setDoInput(true);
+            connection.connect();
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode != HttpsURLConnection.HTTP_OK) {
+                throw new IOException("HTTP error code: " + responseCode);
+            }
+            // Retrieve the response body as an InputStream.
+            stream = connection.getInputStream();
+            if (stream != null) {
+                // Converts Stream to String with max length of 500.
+                StringBuilder resultStringBuilder = new StringBuilder();
+                String buffer;
+                BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+                while ((buffer = reader.readLine()) != null) {
+                    resultStringBuilder.append(buffer);
+                }
+                String result = resultStringBuilder.toString();
+                Gson gson = new Gson();
+                response = gson.fromJson(result, ApiResponse.class);
+            }
+        } finally {
+            // Close Stream and disconnect HTTPS connection.
+            if (stream != null) {
+                stream.close();
+            }
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+        return response;
+    }
+
+    /**
+     * Updates the DownloadCallback with the result.
+     */
+    @Override
+    protected void onPostExecute(Result result) {
+        if (result != null && mCallback != null) {
+            mCallback.onApiResponse(result);
+        }
+    }
+
+    /**
+     * Override to add special behavior for cancelled AsyncTask.
+     */
+    @Override
+    protected void onCancelled(Result result) {
+    }
+}

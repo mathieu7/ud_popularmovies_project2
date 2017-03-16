@@ -17,12 +17,18 @@ import com.miller.popularmovies.http.MovieDBApiCallback;
 import com.miller.popularmovies.http.MovieDBAsyncTask;
 import com.miller.popularmovies.models.Movie;
 import com.miller.popularmovies.models.MoviePreference;
+import com.miller.popularmovies.utils.ApiUtils;
 import com.miller.popularmovies.utils.EndlessRecyclerViewScrollListener;
 
 import java.util.ArrayList;
 
-public class MainActivity extends AppCompatActivity implements MovieDBApiCallback {
+public class MainActivity extends AppCompatActivity implements MovieDBApiCallback, MovieAdapter.OnMovieClickedListener {
+    @Override
+    public void onMovieClicked(Movie movie) {
+        openMovieDetails(movie);
+    }
 
+    public static final String MOVIE_INTENT_EXTRA_KEY = "movie";
     private RecyclerView mMovieGridRecyclerView;
     private MovieAdapter mMovieAdapter;
     private GridLayoutManager mLayoutManager;
@@ -47,7 +53,7 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
 
         setupActionBar();
         MovieDBAsyncTask task = new MovieDBAsyncTask(this);
-        task.execute(MoviePreference.MOST_POPULAR);
+        task.execute(ApiUtils.buildUriString(MoviePreference.MOST_POPULAR, this));
     }
 
     private void loadMore(final int page) {
@@ -109,6 +115,7 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
             ArrayList<Movie> movies = (ArrayList<Movie>) result.mResponse.getResults();
             if (mMovieAdapter == null) {
                 mMovieAdapter = new MovieAdapter(movies, this);
+                mMovieAdapter.setOnMovieClickedListener(this);
                 mMovieGridRecyclerView.setAdapter(mMovieAdapter);
             } else {
                 mMovieAdapter.addItems(movies);
@@ -116,5 +123,15 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         } else if (result.mException != null) {
             //TODO: display error message to the user.
         }
+    }
+
+    /**
+     * Open the DetailActivity with the passed Movie object.
+     * @param movie
+     */
+    private void openMovieDetails(final Movie movie) {
+        Intent intent = new Intent(this, DetailActivity.class);
+        intent.putExtra(MOVIE_INTENT_EXTRA_KEY, movie);
+        startActivity(intent);
     }
 }

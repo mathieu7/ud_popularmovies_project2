@@ -3,6 +3,7 @@ package com.miller.popularmovies.adapters;
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
@@ -20,6 +21,16 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.ViewHolder> 
         mMovies = movies;
         mContext = context;
     }
+
+    public void setOnMovieClickedListener(OnMovieClickedListener listener) {
+        mListener = listener;
+    }
+
+    public interface OnMovieClickedListener {
+        void onMovieClicked(Movie movie);
+    }
+
+    private OnMovieClickedListener mListener;
 
     /**
      * Add items to the end of the current adapter's dataset.
@@ -40,8 +51,16 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.ViewHolder> 
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        Movie movie = mMovies.get(position);
+        final Movie movie = mMovies.get(position);
         ImageUtils.setMoviePoster(movie.getPosterPath(), mContext, holder.mImageView);
+        holder.mImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mListener != null) {
+                    mListener.onMovieClicked(movie);
+                }
+            }
+        });
     }
 
     @Override
@@ -49,10 +68,10 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.ViewHolder> 
         return (mMovies == null || mMovies.isEmpty()) ? 0 : mMovies.size();
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
-        public ImageView mImageView;
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        ImageView mImageView;
 
-        public ViewHolder(ImageView view) {
+        ViewHolder(ImageView view) {
             super(view);
             mImageView = view;
         }

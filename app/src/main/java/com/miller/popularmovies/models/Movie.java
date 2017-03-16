@@ -2,6 +2,8 @@ package com.miller.popularmovies.models;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+
+import java.util.ArrayList;
 import java.util.List;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
@@ -22,7 +24,7 @@ public class Movie implements Parcelable
     private String releaseDate;
     @SerializedName("genre_ids")
     @Expose
-    private List<Integer> genreIds = null;
+    private List<Integer> genreIds = new ArrayList<Integer>();
     @SerializedName("id")
     @Expose
     private Integer id;
@@ -79,8 +81,7 @@ public class Movie implements Parcelable
             return (new Movie[size]);
         }
 
-    }
-            ;
+    };
 
     public String getPosterPath() {
         return posterPath;

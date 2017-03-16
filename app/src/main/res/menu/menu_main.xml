@@ -3,8 +3,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.miller.popularmovies.activities.MainActivity">
     <item
-        android:id="@+id/action_settings"
-        android:orderInCategory="100"
-        android:title="@string/action_settings"
-        app:showAsAction="never" />
+        android:icon="@android:drawable/ic_menu_sort_by_size"
+        android:title="Display"
+        app:showAsAction="ifRoom">
+        <menu>
+            <item
+                android:id="@+id/action_display_popular"
+                android:title="@string/action_display_popular" />
+            <item
+                android:id="@+id/action_display_top_rated"
+                android:title="@string/action_display_top_rated" />
+        </menu>
+    </item>
+
 </menu>

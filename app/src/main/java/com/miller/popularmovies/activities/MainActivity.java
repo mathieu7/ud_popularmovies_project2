@@ -3,13 +3,16 @@ package com.miller.popularmovies.activities;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.ActivityOptionsCompat;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ImageView;
 
 import com.miller.popularmovies.R;
 import com.miller.popularmovies.adapters.MovieAdapter;
@@ -23,16 +26,19 @@ import com.miller.popularmovies.utils.EndlessRecyclerViewScrollListener;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements MovieDBApiCallback, MovieAdapter.OnMovieClickedListener {
+    private static final String POSTER_TRANSITION_KEY = "moviePosterTransition";
     @Override
-    public void onMovieClicked(Movie movie) {
-        openMovieDetails(movie);
+    public void onMovieClicked(Movie movie, ImageView imageView) {
+        openMovieDetails(movie, imageView);
     }
 
     public static final String MOVIE_INTENT_EXTRA_KEY = "movie";
     private RecyclerView mMovieGridRecyclerView;
     private MovieAdapter mMovieAdapter;
     private GridLayoutManager mLayoutManager;
+    private MoviePreference mMoviePreference = MoviePreference.MOST_POPULAR;
     private static final int NUMBER_OF_SPANS = 2;
+    private MovieDBAsyncTask mTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,18 +53,25 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         mMovieGridRecyclerView.addOnScrollListener(new EndlessRecyclerViewScrollListener(mLayoutManager) {
             @Override
             public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
-                loadMore(page);
+                load(page);
             }
         });
 
         setupActionBar();
-        MovieDBAsyncTask task = new MovieDBAsyncTask(this);
-        task.execute(ApiUtils.buildUriString(MoviePreference.MOST_POPULAR, this));
+        load();
     }
 
-    private void loadMore(final int page) {
-        MovieDBAsyncTask task = new MovieDBAsyncTask(this);
-       // task.execute(MoviePreference.MOST_POPULAR, page + 1);
+    private void load(final int page) {
+        if (mTask != null && !mTask.isCancelled()) {
+            mTask.cancel(true);
+        }
+        mTask = new MovieDBAsyncTask(this);
+
+    }
+
+    private void load() {
+        mTask = new MovieDBAsyncTask(this);
+        mTask.execute(ApiUtils.buildUriString(mMoviePreference, this));
     }
 
     private void setupActionBar() {
@@ -73,29 +86,44 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
 
     /**
      * Open the SettingsActivity when the Settings menu item is selected.
+     *
      * @param item
      * @return
      */
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.action_settings:
-                Intent intent = new Intent(this, SettingsActivity.class);
-                startActivityForResult(intent, SETTINGS_REQ_CODE);
-                return true;
+            case R.id.action_display_top_rated:
+                mMoviePreference = MoviePreference.TOP_RATED;
+                load();
+                break;
+            case R.id.action_display_popular:
+                mMoviePreference = MoviePreference.MOST_POPULAR;
+                load();
+                break;
         }
         return super.onOptionsItemSelected(item);
     }
 
-    private static final int SETTINGS_REQ_CODE = 0x40;
-
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
-        //savedInstanceState.
+        savedInstanceState.putParcelableArrayList("currentResults", mMovieResults);
+        savedInstanceState.putSerializable("currentPreference", mMoviePreference);
+        savedInstanceState.putParcelable("recyclerViewState", mLayoutManager.onSaveInstanceState());
         super.onSaveInstanceState(savedInstanceState);
+    }
+
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        if(savedInstanceState != null) {
+            mLayoutManager.onRestoreInstanceState(savedInstanceState.getParcelable("recyclerViewState"));
+            mMoviePreference = (MoviePreference) savedInstanceState.getSerializable("currentPreference");
+            mMovieResults = savedInstanceState.getParcelableArrayList("currentResults");
+        }
     }
 
     /**
      * Fetch the current network info to deduce if the device has internet connectivity.
+     *
      * @return
      */
     @Override
@@ -107,31 +135,43 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
     /**
      * Callback triggered from a call to the Movie DB Api.
      * Display the movies or update the current adapter.
+     *
      * @param result
      */
     @Override
     public void onApiResponse(MovieDBAsyncTask.Result result) {
         if (result.mResponse != null) {
-            ArrayList<Movie> movies = (ArrayList<Movie>) result.mResponse.getResults();
+            ArrayList<Movie> results = (ArrayList<Movie>) result.mResponse.getResults();
             if (mMovieAdapter == null) {
-                mMovieAdapter = new MovieAdapter(movies, this);
+                mMovieAdapter = new MovieAdapter(results, this);
                 mMovieAdapter.setOnMovieClickedListener(this);
                 mMovieGridRecyclerView.setAdapter(mMovieAdapter);
+                mMovieResults = results;
             } else {
-                mMovieAdapter.addItems(movies);
+                mMovieAdapter.addItems(results);
+                mMovieResults.addAll(results);
             }
         } else if (result.mException != null) {
-            //TODO: display error message to the user.
+            displayErrorState(result.mException.toString());
         }
     }
 
+    private void displayErrorState(final String error) {
+
+    }
+
+    private ArrayList<Movie> mMovieResults;
+
     /**
      * Open the DetailActivity with the passed Movie object.
+     *
      * @param movie
      */
-    private void openMovieDetails(final Movie movie) {
+    private void openMovieDetails(final Movie movie, final ImageView posterView) {
         Intent intent = new Intent(this, DetailActivity.class);
         intent.putExtra(MOVIE_INTENT_EXTRA_KEY, movie);
-        startActivity(intent);
+        ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(this,
+                posterView, POSTER_TRANSITION_KEY);
+        ActivityCompat.startActivity(this, intent, options.toBundle());
     }
 }

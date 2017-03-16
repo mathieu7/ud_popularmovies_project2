@@ -27,7 +27,7 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.ViewHolder> 
     }
 
     public interface OnMovieClickedListener {
-        void onMovieClicked(Movie movie);
+        void onMovieClicked(Movie movie, ImageView imageView);
     }
 
     private OnMovieClickedListener mListener;
@@ -53,11 +53,12 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.ViewHolder> 
     public void onBindViewHolder(ViewHolder holder, int position) {
         final Movie movie = mMovies.get(position);
         ImageUtils.setMoviePoster(movie.getPosterPath(), mContext, holder.mImageView);
+        final ImageView imageView = holder.mImageView;
         holder.mImageView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (mListener != null) {
-                    mListener.onMovieClicked(movie);
+                    mListener.onMovieClicked(movie, imageView);
                 }
             }
         });

@@ -141,6 +141,7 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         }
         mTask = new MovieDBAsyncTask(this);
         mTask.execute(ApiUtils.buildUriString(mMoviePreference, this, pageToLoad));
+        mIsLoading = true;
     }
 
     private void load() {
@@ -154,6 +155,7 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         } else {
             mTask = new MovieDBAsyncTask(this);
             mTask.execute(ApiUtils.buildUriString(mMoviePreference, this));
+            mIsLoading = true;
         }
     }
 
@@ -259,8 +261,8 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
      */
     private void displayNoNetworkState() {
         Snackbar snackbar = Snackbar.make(mLoadingDialog,
-                "No Network Connection. Please enable a network", Snackbar.LENGTH_INDEFINITE);
-        snackbar.setAction("Enable Network", new View.OnClickListener() {
+                getString(R.string.snackbar_no_network), Snackbar.LENGTH_INDEFINITE);
+        snackbar.setAction(getString(R.string.snackbar_action_enable), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));

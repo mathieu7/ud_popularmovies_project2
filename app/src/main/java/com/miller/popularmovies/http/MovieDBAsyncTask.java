@@ -109,19 +109,12 @@ public class MovieDBAsyncTask extends AsyncTask<String, Void, MovieDBAsyncTask.R
     }
 
     /**
-     * Updates the DownloadCallback with the result.
+     * Updates the listener with the result.
      */
     @Override
     protected void onPostExecute(Result result) {
         if (result != null && mCallback != null) {
             mCallback.onApiResponse(result);
         }
-    }
-
-    /**
-     * Override to add special behavior for cancelled AsyncTask.
-     */
-    @Override
-    protected void onCancelled(Result result) {
     }
 }

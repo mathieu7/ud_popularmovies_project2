@@ -1,7 +1,5 @@
 package com.miller.popularmovies.http;
 
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.AsyncTask;
 
 import com.google.gson.Gson;
@@ -26,10 +24,10 @@ public class MovieDBAsyncTask extends AsyncTask<String, Void, MovieDBAsyncTask.R
     public static class Result {
         public ApiResponse mResponse;
         public Exception mException;
-        public Result(ApiResponse response) {
+        Result(ApiResponse response) {
             mResponse = response;
         }
-        public Result(Exception exception) {
+        Result(Exception exception) {
             mException = exception;
         }
     }
@@ -39,23 +37,6 @@ public class MovieDBAsyncTask extends AsyncTask<String, Void, MovieDBAsyncTask.R
     }
 
     private MovieDBApiCallback mCallback;
-
-    /**
-     * Cancel background network operation if we do not have network connectivity.
-     */
-    @Override
-    protected void onPreExecute() {
-        if (mCallback != null) {
-            NetworkInfo networkInfo = mCallback.getActiveNetworkInfo();
-            if (networkInfo == null || !networkInfo.isConnected() ||
-                    (networkInfo.getType() != ConnectivityManager.TYPE_WIFI
-                            && networkInfo.getType() != ConnectivityManager.TYPE_MOBILE)) {
-                mCallback.onApiResponse(null);
-                cancel(true);
-            }
-        }
-    }
-
     /**
      * Defines work to perform on the background thread.
      */

@@ -1,5 +1,6 @@
 package com.miller.popularmovies.adapters;
 
+import android.app.Activity;
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -16,21 +17,16 @@ import java.util.ArrayList;
 public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.ViewHolder> {
     private ArrayList<Movie> mMovies;
     private Context mContext;
+    private OnMovieClickedListener mListener;
 
     public MovieAdapter(ArrayList<Movie> movies, Context context) {
         mMovies = movies;
         mContext = context;
+        if (!(mContext instanceof OnMovieClickedListener) && !(mContext instanceof Activity)) {
+            throw new IllegalArgumentException("Activity Context must implement OnMovieClickedListener");
+        }
+        mListener = (OnMovieClickedListener) mContext;
     }
-
-    public void setOnMovieClickedListener(OnMovieClickedListener listener) {
-        mListener = listener;
-    }
-
-    public interface OnMovieClickedListener {
-        void onMovieClicked(Movie movie, ImageView imageView);
-    }
-
-    private OnMovieClickedListener mListener;
 
     /**
      * Add items to the end of the current adapter's dataset.
@@ -40,6 +36,15 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.ViewHolder> 
         int oldSize = mMovies.size();
         mMovies.addAll(movies);
         notifyItemRangeInserted(oldSize, movies.size());
+    }
+
+    public ArrayList<Movie> getMovies() {
+        return mMovies;
+    }
+
+    public void clear() {
+        mMovies.clear();
+        notifyDataSetChanged();
     }
 
     @Override
@@ -67,6 +72,10 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.ViewHolder> 
     @Override
     public int getItemCount() {
         return (mMovies == null || mMovies.isEmpty()) ? 0 : mMovies.size();
+    }
+
+    public interface OnMovieClickedListener {
+        void onMovieClicked(Movie movie, ImageView imageView);
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {

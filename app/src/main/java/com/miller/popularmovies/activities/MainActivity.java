@@ -1,15 +1,22 @@
 package com.miller.popularmovies.activities;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.support.design.widget.BaseTransientBottomBar;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -26,10 +33,14 @@ import com.miller.popularmovies.models.Movie;
 import com.miller.popularmovies.models.MoviePreference;
 import com.miller.popularmovies.utils.ApiUtils;
 import com.miller.popularmovies.utils.EndlessRecyclerViewScrollListener;
+import com.miller.popularmovies.utils.NetworkUtils;
 
 import java.util.ArrayList;
 
-public class MainActivity extends AppCompatActivity implements MovieDBApiCallback, MovieAdapter.OnMovieClickedListener {
+import static android.net.ConnectivityManager.CONNECTIVITY_ACTION;
+
+public class MainActivity extends AppCompatActivity implements MovieDBApiCallback,
+        MovieAdapter.OnMovieClickedListener {
     public static final String MOVIE_INTENT_EXTRA_KEY = "movie";
     private static final String POSTER_TRANSITION_KEY = "moviePosterTransition";
     private static final int NUMBER_OF_SPANS = 2;
@@ -41,7 +52,28 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
     private MovieDBAsyncTask mTask;
     private View mLoadingDialog;
     private ProgressBar mProgressBar;
-    private ArrayList<Movie> mMovieResults;
+    private boolean isNetworkConnected;
+    private boolean mIsLoading;
+    private boolean mIsContentLoaded;
+
+    /**
+     * Broadcast Receiver to track network connectivity changes.
+     */
+    private BroadcastReceiver mConnectivityReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equalsIgnoreCase(CONNECTIVITY_ACTION)) {
+                boolean isConnected = NetworkUtils.isConnected(MainActivity.this);
+                // Trigger the initial load again if the device regains connectivity.
+                if (isNetworkConnected != isConnected && isConnected) {
+                    isNetworkConnected = true;
+                    if (!mIsContentLoaded) {
+                        load();
+                    }
+                }
+            }
+        }
+    };
 
     @Override
     public void onMovieClicked(Movie movie, ImageView imageView) {
@@ -54,7 +86,14 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         setContentView(R.layout.activity_main);
 
         initLayout();
-        if (savedInstanceState == null) load();
+        if (savedInstanceState == null) {
+            load();
+        }
+    }
+
+    protected void onResume() {
+        super.onResume();
+        registerReceiver(mConnectivityReceiver, new IntentFilter(CONNECTIVITY_ACTION));
     }
 
     private void initLayout() {
@@ -73,28 +112,49 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         setupActionBar();
     }
 
+    /**
+     * Cancel the running download task if the app goes to the background.
+     */
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(mConnectivityReceiver);
+        if (mTask != null) {
+            mTask.cancel(true);
+            mTask = null;
+        }
+    }
+
+    /**
+     * Load more content from the Movie DB API. This method is triggered as the user scrolls to the bottom
+     * of the recyclerview.
+     */
     private void loadMore() {
         if (mPreviousApiResponse == null) return;
         final int pageToLoad = mPreviousApiResponse.getPage() + 1;
         if (pageToLoad > mPreviousApiResponse.getTotalPages()) return;
-        if (mTask != null && !mTask.isCancelled()) {
+
+        Log.d(MainActivity.class.getName(), "loading page: "+ pageToLoad);
+        if (mTask != null) {
             mTask.cancel(true);
+            mTask = null;
         }
         mTask = new MovieDBAsyncTask(this);
         mTask.execute(ApiUtils.buildUriString(mMoviePreference, this, pageToLoad));
     }
 
     private void load() {
-        if (mMovieResults != null) {
-            mMovieResults.clear();
-            mMovieResults = null;
-        }
         if (mMovieAdapter != null) {
+            mMovieAdapter.clear();
             mMovieAdapter = null;
         }
         displayLoadingDialog(true);
-        mTask = new MovieDBAsyncTask(this);
-        mTask.execute(ApiUtils.buildUriString(mMoviePreference, this));
+        if (!NetworkUtils.isConnected(this)) {
+            displayNoNetworkState();
+        } else {
+            mTask = new MovieDBAsyncTask(this);
+            mTask.execute(ApiUtils.buildUriString(mMoviePreference, this));
+        }
     }
 
     private void setupActionBar() {
@@ -129,7 +189,9 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
-        savedInstanceState.putParcelableArrayList("currentResults", mMovieResults);
+        if (mMovieAdapter != null && mMovieAdapter.getMovies() != null) {
+            savedInstanceState.putParcelableArrayList("currentMovies", mMovieAdapter.getMovies());
+        }
         savedInstanceState.putSerializable("currentPreference", mMoviePreference);
         savedInstanceState.putParcelable("recyclerViewState", mLayoutManager.onSaveInstanceState());
         savedInstanceState.putParcelable("previousApiResponse", mPreviousApiResponse);
@@ -140,26 +202,13 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         super.onRestoreInstanceState(savedInstanceState);
         if (savedInstanceState != null) {
             mMoviePreference = (MoviePreference) savedInstanceState.getSerializable("currentPreference");
-            mMovieResults = savedInstanceState.getParcelableArrayList("currentResults");
+            ArrayList<Movie> savedMovieList = savedInstanceState.getParcelableArrayList("currentMovies");
             mPreviousApiResponse = savedInstanceState.getParcelable("previousApiResponse");
 
-            mMovieAdapter = new MovieAdapter(mMovieResults, this);
+            mMovieAdapter = new MovieAdapter(savedMovieList, this);
             mMovieGridRecyclerView.setAdapter(mMovieAdapter);
-            mMovieAdapter.setOnMovieClickedListener(this);
-
             mLayoutManager.onRestoreInstanceState(savedInstanceState.getParcelable("recyclerViewState"));
         }
-    }
-
-    /**
-     * Fetch the current network info to deduce if the device has internet connectivity.
-     *
-     * @return
-     */
-    @Override
-    public NetworkInfo getActiveNetworkInfo() {
-        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-        return connectivityManager.getActiveNetworkInfo();
     }
 
     /**
@@ -170,21 +219,21 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
      */
     @Override
     public void onApiResponse(MovieDBAsyncTask.Result result) {
+        mIsLoading = false;
         if (result.mResponse != null) {
+            mIsContentLoaded = true;
             hideLoadingDialog();
             ArrayList<Movie> results = (ArrayList<Movie>) result.mResponse.getResults();
             if (mMovieAdapter == null) {
                 mMovieAdapter = new MovieAdapter(results, this);
-                mMovieAdapter.setOnMovieClickedListener(this);
                 mMovieGridRecyclerView.setAdapter(mMovieAdapter);
-                mMovieResults = results;
             } else {
                 mMovieAdapter.addItems(results);
-                mMovieResults.addAll(results);
+
             }
             mPreviousApiResponse = result.mResponse;
         } else if (result.mException != null) {
-            displayErrorState(result.mException.toString());
+            displayErrorState(result.mException.getMessage());
         }
     }
 
@@ -203,6 +252,21 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
 
     private void hideLoadingDialog() {
         mLoadingDialog.setVisibility(View.GONE);
+    }
+
+    /**
+     * Prompt user with SnackBar to enable network connectivity.
+     */
+    private void displayNoNetworkState() {
+        Snackbar snackbar = Snackbar.make(mLoadingDialog,
+                "No Network Connection. Please enable a network", Snackbar.LENGTH_INDEFINITE);
+        snackbar.setAction("Enable Network", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
+                    }
+                });
+        snackbar.show();
     }
 
     /**

@@ -12,12 +12,16 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import com.miller.popularmovies.R;
 import com.miller.popularmovies.adapters.MovieAdapter;
 import com.miller.popularmovies.http.MovieDBApiCallback;
 import com.miller.popularmovies.http.MovieDBAsyncTask;
+import com.miller.popularmovies.models.ApiResponse;
 import com.miller.popularmovies.models.Movie;
 import com.miller.popularmovies.models.MoviePreference;
 import com.miller.popularmovies.utils.ApiUtils;
@@ -26,50 +30,69 @@ import com.miller.popularmovies.utils.EndlessRecyclerViewScrollListener;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements MovieDBApiCallback, MovieAdapter.OnMovieClickedListener {
+    public static final String MOVIE_INTENT_EXTRA_KEY = "movie";
     private static final String POSTER_TRANSITION_KEY = "moviePosterTransition";
+    private static final int NUMBER_OF_SPANS = 2;
+    private RecyclerView mMovieGridRecyclerView;
+    private MovieAdapter mMovieAdapter;
+    private GridLayoutManager mLayoutManager;
+    private ApiResponse mPreviousApiResponse;
+    private MoviePreference mMoviePreference = MoviePreference.MOST_POPULAR;
+    private MovieDBAsyncTask mTask;
+    private View mLoadingDialog;
+    private ProgressBar mProgressBar;
+    private ArrayList<Movie> mMovieResults;
+
     @Override
     public void onMovieClicked(Movie movie, ImageView imageView) {
         openMovieDetails(movie, imageView);
     }
-
-    public static final String MOVIE_INTENT_EXTRA_KEY = "movie";
-    private RecyclerView mMovieGridRecyclerView;
-    private MovieAdapter mMovieAdapter;
-    private GridLayoutManager mLayoutManager;
-    private MoviePreference mMoviePreference = MoviePreference.MOST_POPULAR;
-    private static final int NUMBER_OF_SPANS = 2;
-    private MovieDBAsyncTask mTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        initLayout();
+        if (savedInstanceState == null) load();
+    }
+
+    private void initLayout() {
         mMovieGridRecyclerView = (RecyclerView) findViewById(R.id.movie_grid_recyclerview);
+        mLoadingDialog = findViewById(R.id.loading_dialog_layout);
+        mProgressBar = (ProgressBar) findViewById(R.id.loading_dialog_progress_bar);
         mLayoutManager = new GridLayoutManager(this, NUMBER_OF_SPANS);
         mMovieGridRecyclerView.setLayoutManager(mLayoutManager);
-
         mMovieGridRecyclerView.setHasFixedSize(true);
         mMovieGridRecyclerView.addOnScrollListener(new EndlessRecyclerViewScrollListener(mLayoutManager) {
             @Override
             public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
-                load(page);
+                loadMore();
             }
         });
-
         setupActionBar();
-        load();
     }
 
-    private void load(final int page) {
+    private void loadMore() {
+        if (mPreviousApiResponse == null) return;
+        final int pageToLoad = mPreviousApiResponse.getPage() + 1;
+        if (pageToLoad > mPreviousApiResponse.getTotalPages()) return;
         if (mTask != null && !mTask.isCancelled()) {
             mTask.cancel(true);
         }
         mTask = new MovieDBAsyncTask(this);
-
+        mTask.execute(ApiUtils.buildUriString(mMoviePreference, this, pageToLoad));
     }
 
     private void load() {
+        if (mMovieResults != null) {
+            mMovieResults.clear();
+            mMovieResults = null;
+        }
+        if (mMovieAdapter != null) {
+            mMovieAdapter = null;
+        }
+        displayLoadingDialog(true);
         mTask = new MovieDBAsyncTask(this);
         mTask.execute(ApiUtils.buildUriString(mMoviePreference, this));
     }
@@ -109,15 +132,22 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         savedInstanceState.putParcelableArrayList("currentResults", mMovieResults);
         savedInstanceState.putSerializable("currentPreference", mMoviePreference);
         savedInstanceState.putParcelable("recyclerViewState", mLayoutManager.onSaveInstanceState());
+        savedInstanceState.putParcelable("previousApiResponse", mPreviousApiResponse);
         super.onSaveInstanceState(savedInstanceState);
     }
 
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
-        if(savedInstanceState != null) {
-            mLayoutManager.onRestoreInstanceState(savedInstanceState.getParcelable("recyclerViewState"));
+        if (savedInstanceState != null) {
             mMoviePreference = (MoviePreference) savedInstanceState.getSerializable("currentPreference");
             mMovieResults = savedInstanceState.getParcelableArrayList("currentResults");
+            mPreviousApiResponse = savedInstanceState.getParcelable("previousApiResponse");
+
+            mMovieAdapter = new MovieAdapter(mMovieResults, this);
+            mMovieGridRecyclerView.setAdapter(mMovieAdapter);
+            mMovieAdapter.setOnMovieClickedListener(this);
+
+            mLayoutManager.onRestoreInstanceState(savedInstanceState.getParcelable("recyclerViewState"));
         }
     }
 
@@ -141,6 +171,7 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
     @Override
     public void onApiResponse(MovieDBAsyncTask.Result result) {
         if (result.mResponse != null) {
+            hideLoadingDialog();
             ArrayList<Movie> results = (ArrayList<Movie>) result.mResponse.getResults();
             if (mMovieAdapter == null) {
                 mMovieAdapter = new MovieAdapter(results, this);
@@ -151,16 +182,28 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
                 mMovieAdapter.addItems(results);
                 mMovieResults.addAll(results);
             }
+            mPreviousApiResponse = result.mResponse;
         } else if (result.mException != null) {
             displayErrorState(result.mException.toString());
         }
     }
 
     private void displayErrorState(final String error) {
-
+        TextView errorView = (TextView) findViewById(R.id.error_text_view);
+        errorView.setText(error);
+        displayLoadingDialog(false);
     }
 
-    private ArrayList<Movie> mMovieResults;
+    private void displayLoadingDialog(final boolean showProgress) {
+        mProgressBar.setVisibility(showProgress ? View.VISIBLE : View.GONE);
+        if (mLoadingDialog.getVisibility() != View.VISIBLE) {
+            mLoadingDialog.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void hideLoadingDialog() {
+        mLoadingDialog.setVisibility(View.GONE);
+    }
 
     /**
      * Open the DetailActivity with the passed Movie object.

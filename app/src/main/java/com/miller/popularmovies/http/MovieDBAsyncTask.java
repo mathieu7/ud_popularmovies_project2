@@ -6,8 +6,6 @@ import android.os.AsyncTask;
 
 import com.google.gson.Gson;
 import com.miller.popularmovies.models.ApiResponse;
-import com.miller.popularmovies.models.MoviePreference;
-import com.miller.popularmovies.utils.ApiUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -39,7 +37,9 @@ public class MovieDBAsyncTask extends AsyncTask<String, Void, MovieDBAsyncTask.R
     public MovieDBAsyncTask(MovieDBApiCallback callback) {
         mCallback = callback;
     }
+
     private MovieDBApiCallback mCallback;
+
     /**
      * Cancel background network operation if we do not have network connectivity.
      */

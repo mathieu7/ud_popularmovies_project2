@@ -1,3 +1,3 @@
-# ud-popularmovies
+# ud-popularmovies-project2
 
-Udacity Android Nanodegree project #1
+Udacity Android Nanodegree project #2

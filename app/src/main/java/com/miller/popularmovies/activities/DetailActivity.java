@@ -1,13 +1,9 @@
 package com.miller.popularmovies.activities;
 
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.AppCompatRatingBar;
 import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.ImageView;
 import android.widget.RatingBar;
 import android.widget.TextView;
@@ -15,7 +11,6 @@ import android.widget.TextView;
 import com.miller.popularmovies.R;
 import com.miller.popularmovies.models.Movie;
 import com.miller.popularmovies.utils.ImageUtils;
-import com.squareup.picasso.Picasso;
 
 public class DetailActivity extends AppCompatActivity {
     private Movie mMovie;
@@ -41,11 +36,11 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     private void setupMovieDetails() {
-        mPosterView = (ImageView) findViewById(R.id.image_view_movie_poster);
-        mTitleView = (TextView) findViewById(R.id.text_view_movie_header);
-        mReleaseView = (TextView) findViewById(R.id.text_view_movie_release);
-        mRating = (RatingBar) findViewById(R.id.rating_bar_movie);
-        mSummaryView = (TextView) findViewById(R.id.text_view_movie_summary);
+        mPosterView = (ImageView) findViewById(R.id.movie_poster_image_view);
+        mTitleView = (TextView) findViewById(R.id.movie_header_text_view);
+        mReleaseView = (TextView) findViewById(R.id.movie_release_date_text_view);
+        mRating = (RatingBar) findViewById(R.id.movie_rating_bar);
+        mSummaryView = (TextView) findViewById(R.id.movie_summary_textview);
 
         ImageUtils.setMoviePoster(mMovie.getPosterPath(), this, mPosterView);
         mTitleView.setText(mMovie.getTitle());

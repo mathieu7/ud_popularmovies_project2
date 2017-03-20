@@ -4,6 +4,7 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.widget.ImageView;
 
+import com.miller.popularmovies.R;
 import com.squareup.picasso.Picasso;
 
 public class ImageUtils {
@@ -37,6 +38,7 @@ public class ImageUtils {
 
     /**
      * Helper function to fetch a movie poster image and set onto a given imageView.
+     * On error, simply display the app icon.
      * @param posterPath
      * @param context
      * @param imageView
@@ -45,6 +47,12 @@ public class ImageUtils {
                                @NonNull final Context context,
                                @NonNull ImageView imageView)
     {
-        Picasso.with(context).load(formatImageURL(posterPath)).into(imageView);
+        if (posterPath.isEmpty()) {
+            return;
+        }
+        Picasso.with(context)
+                .load(formatImageURL(posterPath))
+                .error(R.mipmap.ic_launcher)
+                .into(imageView);
     }
 }

@@ -25,7 +25,7 @@ import com.miller.popularmovies.R;
 import com.miller.popularmovies.adapters.MovieAdapter;
 import com.miller.popularmovies.http.MovieDBApiCallback;
 import com.miller.popularmovies.http.MovieDBAsyncTask;
-import com.miller.popularmovies.models.ApiResponse;
+import com.miller.popularmovies.models.MovieList;
 import com.miller.popularmovies.models.Movie;
 import com.miller.popularmovies.models.MoviePreference;
 import com.miller.popularmovies.utils.ApiUtils;
@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
     private RecyclerView mMovieGridRecyclerView;
     private MovieAdapter mMovieAdapter;
     private GridLayoutManager mLayoutManager;
-    private ApiResponse mPreviousApiResponse;
+    private MovieList mPreviousMovieList;
     private MoviePreference mMoviePreference = MoviePreference.MOST_POPULAR;
     private MovieDBAsyncTask mTask;
     private View mLoadingDialog;
@@ -127,9 +127,9 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
      * of the recyclerview.
      */
     private void loadMore() {
-        if (mPreviousApiResponse == null) return;
-        final int pageToLoad = mPreviousApiResponse.getPage() + 1;
-        if (pageToLoad > mPreviousApiResponse.getTotalPages()) return;
+        if (mPreviousMovieList == null) return;
+        final int pageToLoad = mPreviousMovieList.getPage() + 1;
+        if (pageToLoad > mPreviousMovieList.getTotalPages()) return;
 
         Log.d(MainActivity.class.getName(), "loading page: "+ pageToLoad);
         if (mTask != null) {
@@ -193,7 +193,7 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         }
         savedInstanceState.putSerializable("currentPreference", mMoviePreference);
         savedInstanceState.putParcelable("recyclerViewState", mLayoutManager.onSaveInstanceState());
-        savedInstanceState.putParcelable("previousApiResponse", mPreviousApiResponse);
+        savedInstanceState.putParcelable("previousApiResponse", mPreviousMovieList);
         super.onSaveInstanceState(savedInstanceState);
     }
 
@@ -202,7 +202,7 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         if (savedInstanceState != null) {
             mMoviePreference = (MoviePreference) savedInstanceState.getSerializable("currentPreference");
             ArrayList<Movie> savedMovieList = savedInstanceState.getParcelableArrayList("currentMovies");
-            mPreviousApiResponse = savedInstanceState.getParcelable("previousApiResponse");
+            mPreviousMovieList = savedInstanceState.getParcelable("previousApiResponse");
 
             mMovieAdapter = new MovieAdapter(savedMovieList, this);
             mMovieGridRecyclerView.setAdapter(mMovieAdapter);
@@ -230,7 +230,7 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
                 mMovieAdapter.addItems(results);
 
             }
-            mPreviousApiResponse = result.mResponse;
+            mPreviousMovieList = result.mResponse;
         } else if (result.mException != null) {
             displayErrorState(result.mException.getMessage());
         }

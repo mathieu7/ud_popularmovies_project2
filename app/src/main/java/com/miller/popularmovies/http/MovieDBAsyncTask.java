@@ -3,7 +3,7 @@ package com.miller.popularmovies.http;
 import android.os.AsyncTask;
 
 import com.google.gson.Gson;
-import com.miller.popularmovies.models.ApiResponse;
+import com.miller.popularmovies.models.MovieList;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -19,12 +19,12 @@ import javax.net.ssl.HttpsURLConnection;
 public class MovieDBAsyncTask extends AsyncTask<String, Void, MovieDBAsyncTask.Result> {
 
     /**
-     * Result passed back to UI Thread once the task is completed or cancelled.
+     * Review passed back to UI Thread once the task is completed or cancelled.
      */
     public static class Result {
-        public ApiResponse mResponse;
+        public MovieList mResponse;
         public Exception mException;
-        Result(ApiResponse response) {
+        Result(MovieList response) {
             mResponse = response;
         }
         Result(Exception exception) {
@@ -47,7 +47,7 @@ public class MovieDBAsyncTask extends AsyncTask<String, Void, MovieDBAsyncTask.R
             String urlString = urls[0];
             try {
                 URL url = new URL(urlString);
-                ApiResponse response = executeDownload(url);
+                MovieList response = executeDownload(url);
                 if (response != null) {
                     result = new Result(response);
                 } else {
@@ -66,10 +66,10 @@ public class MovieDBAsyncTask extends AsyncTask<String, Void, MovieDBAsyncTask.R
      * @return
      * @throws IOException
      */
-    private ApiResponse executeDownload(final URL url) throws IOException {
+    private MovieList executeDownload(final URL url) throws IOException {
         InputStream stream = null;
         HttpsURLConnection connection = null;
-        ApiResponse response = null;
+        MovieList response = null;
         try {
             connection = (HttpsURLConnection) url.openConnection();
             connection.setReadTimeout(3000);
@@ -94,7 +94,7 @@ public class MovieDBAsyncTask extends AsyncTask<String, Void, MovieDBAsyncTask.R
                 }
                 String result = resultStringBuilder.toString();
                 Gson gson = new Gson();
-                response = gson.fromJson(result, ApiResponse.class);
+                response = gson.fromJson(result, MovieList.class);
             }
         } finally {
             // Close Stream and disconnect HTTPS connection.

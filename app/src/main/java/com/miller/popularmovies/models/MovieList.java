@@ -8,7 +8,7 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
-public class ApiResponse implements Parcelable {
+public class MovieList implements Parcelable {
 
     @SerializedName("page")
     @Expose
@@ -22,14 +22,14 @@ public class ApiResponse implements Parcelable {
     @SerializedName("total_pages")
     @Expose
     private Integer totalPages;
-    public final static Parcelable.Creator<ApiResponse> CREATOR = new Creator<ApiResponse>() {
+    public final static Parcelable.Creator<MovieList> CREATOR = new Creator<MovieList>() {
 
 
         @SuppressWarnings({
                 "unchecked"
         })
-        public ApiResponse createFromParcel(Parcel in) {
-            ApiResponse instance = new ApiResponse();
+        public MovieList createFromParcel(Parcel in) {
+            MovieList instance = new MovieList();
             instance.page = ((Integer) in.readValue((Integer.class.getClassLoader())));
             in.readList(instance.results, (com.miller.popularmovies.models.Movie.class.getClassLoader()));
             instance.totalResults = ((Integer) in.readValue((Integer.class.getClassLoader())));
@@ -37,8 +37,8 @@ public class ApiResponse implements Parcelable {
             return instance;
         }
 
-        public ApiResponse[] newArray(int size) {
-            return (new ApiResponse[size]);
+        public MovieList[] newArray(int size) {
+            return (new MovieList[size]);
         }
 
     };

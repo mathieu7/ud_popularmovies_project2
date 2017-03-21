@@ -2,6 +2,7 @@ package com.miller.popularmovies.adapters;
 
 import android.app.Activity;
 import android.content.Context;
+import android.support.v4.view.ViewCompat;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -59,6 +60,7 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.ViewHolder> 
         final Movie movie = mMovies.get(position);
         ImageUtils.setMoviePoster(movie.getPosterPath(), mContext, holder.mImageView);
         final ImageView imageView = holder.mImageView;
+        imageView.setContentDescription(movie.getTitle());
         holder.mImageView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

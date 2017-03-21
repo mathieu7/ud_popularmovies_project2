@@ -7,4 +7,7 @@
 
     <string name="snackbar_no_network">No Network Connection. Please enable a network</string>
     <string name="snackbar_action_enable">Enable</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

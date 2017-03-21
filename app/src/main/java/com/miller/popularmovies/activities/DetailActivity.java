@@ -1,23 +1,28 @@
 package com.miller.popularmovies.activities;
 
 import android.os.Bundle;
+import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
-import android.widget.ImageView;
-import android.widget.RatingBar;
-import android.widget.TextView;
+import android.view.View;
 
 import com.miller.popularmovies.R;
 import com.miller.popularmovies.models.Movie;
-import com.miller.popularmovies.utils.ImageUtils;
 
-public class DetailActivity extends AppCompatActivity {
-    private Movie mMovie;
+public class DetailActivity extends AppCompatActivity implements View.OnClickListener {
     private Toolbar mToolbar;
-    private ImageView mPosterView;
-    private RatingBar mRating;
-    private TextView mTitleView, mReleaseView, mSummaryView;
+    private String mMovieTitle;
+    private FloatingActionButton mFavoriteFAB;
+
+    @Override
+    public void onClick(View v) {
+        if (v == mFavoriteFAB) {
+            //TODO: implement
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,28 +32,19 @@ public class DetailActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         if (getIntent().hasExtra(MainActivity.MOVIE_INTENT_EXTRA_KEY)) {
-            mMovie = getIntent().getParcelableExtra(MainActivity.MOVIE_INTENT_EXTRA_KEY);
+            Movie movie = getIntent().getParcelableExtra(MainActivity.MOVIE_INTENT_EXTRA_KEY);
+            mMovieTitle = movie.getTitle();
+            FragmentManager fragmentManager = getSupportFragmentManager();
+            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+
+            DetailFragment fragment = DetailFragment.newInstance(movie);
+            fragmentTransaction.add(R.id.detail_container, fragment).commit();
         } else {
             finish();
         }
         setupActionBar();
-        setupMovieDetails();
-    }
-
-    private void setupMovieDetails() {
-        mPosterView = (ImageView) findViewById(R.id.movie_poster_image_view);
-        mTitleView = (TextView) findViewById(R.id.movie_header_text_view);
-        mReleaseView = (TextView) findViewById(R.id.movie_release_date_text_view);
-        mRating = (RatingBar) findViewById(R.id.movie_rating_bar);
-        mSummaryView = (TextView) findViewById(R.id.movie_summary_textview);
-
-        ImageUtils.setMoviePoster(mMovie.getPosterPath(), this, mPosterView);
-        mTitleView.setText(mMovie.getTitle());
-        mReleaseView.setText(mMovie.getReleaseDate());
-        mSummaryView.setText(mMovie.getOverview());
-        mRating.setRating(mMovie.getVoteAverage().floatValue() / 2);
-
-        mToolbar.setTitle(mMovie.getTitle());
+        mFavoriteFAB = (FloatingActionButton) findViewById(R.id.favorite_movie_fab);
+        mFavoriteFAB.setOnClickListener(this);
     }
 
     private void setupActionBar() {
@@ -57,6 +53,7 @@ public class DetailActivity extends AppCompatActivity {
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
+        mToolbar.setTitle(mMovieTitle);
     }
 
     @Override

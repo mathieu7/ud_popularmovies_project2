@@ -9,6 +9,7 @@ import android.provider.Settings;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ActivityOptionsCompat;
+import android.support.v4.view.ViewCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -276,6 +277,7 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
     private void openMovieDetails(final Movie movie, final ImageView posterView) {
         Intent intent = new Intent(this, DetailActivity.class);
         intent.putExtra(MOVIE_INTENT_EXTRA_KEY, movie);
+        ViewCompat.setTransitionName(posterView, POSTER_TRANSITION_KEY);
         ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(this,
                 posterView, POSTER_TRANSITION_KEY);
         ActivityCompat.startActivity(this, intent, options.toBundle());

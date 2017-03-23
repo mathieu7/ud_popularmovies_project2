@@ -1,4 +1,4 @@
-package com.miller.popularmovies.utils;
+package com.miller.popularmovies.api;
 
 import android.content.Context;
 import android.net.Uri;

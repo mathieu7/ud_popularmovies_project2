@@ -1,75 +1,42 @@
-package com.miller.popularmovies.http;
-
-import android.os.AsyncTask;
+package com.miller.popularmovies.api;
 
 import com.google.gson.Gson;
-import com.miller.popularmovies.models.MovieList;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URL;
 
 import javax.net.ssl.HttpsURLConnection;
 
 /**
  * AsyncTask to download the movie results from a specific MovieDB endpoint.
  */
-public class MovieDBAsyncTask extends AsyncTask<String, Void, MovieDBAsyncTask.Result> {
+public class MovieDBApiClient {
 
     /**
      * Review passed back to UI Thread once the task is completed or cancelled.
      */
-    public static class Result {
-        public MovieList mResponse;
+    public static class ApiResult<T> {
+        public T mResponse;
         public Exception mException;
-        Result(MovieList response) {
+        public ApiResult(T response) {
             mResponse = response;
         }
-        Result(Exception exception) {
+        public ApiResult(Exception exception) {
             mException = exception;
         }
     }
 
-    public MovieDBAsyncTask(MovieDBApiCallback callback) {
-        mCallback = callback;
-    }
-
-    private MovieDBApiCallback mCallback;
     /**
      * Defines work to perform on the background thread.
      */
-    @Override
-    protected Result doInBackground(String... urls) {
-        Result result = null;
-        if (!isCancelled() && urls != null && urls.length > 0) {
-            String urlString = urls[0];
-            try {
-                URL url = new URL(urlString);
-                MovieList response = executeDownload(url);
-                if (response != null) {
-                    result = new Result(response);
-                } else {
-                    throw new IOException("No response received.");
-                }
-            } catch (Exception e) {
-                result = new Result(e);
-            }
-        }
-        return result;
-    }
 
-    /**
-     * Download the content.
-     * @param url
-     * @return
-     * @throws IOException
-     */
-    private MovieList executeDownload(final URL url) throws IOException {
+    /*public <T> ApiResult<T> makeRequest(T model) throws IOException {
+        ApiResult<T> apiResult;
         InputStream stream = null;
         HttpsURLConnection connection = null;
-        MovieList response = null;
+        T response = null;
         try {
             connection = (HttpsURLConnection) url.openConnection();
             connection.setReadTimeout(3000);
@@ -94,7 +61,7 @@ public class MovieDBAsyncTask extends AsyncTask<String, Void, MovieDBAsyncTask.R
                 }
                 String result = resultStringBuilder.toString();
                 Gson gson = new Gson();
-                response = gson.fromJson(result, MovieList.class);
+                response = gson.fromJson(result, T.class);
             }
         } finally {
             // Close Stream and disconnect HTTPS connection.
@@ -105,16 +72,6 @@ public class MovieDBAsyncTask extends AsyncTask<String, Void, MovieDBAsyncTask.R
                 connection.disconnect();
             }
         }
-        return response;
-    }
-
-    /**
-     * Updates the listener with the result.
-     */
-    @Override
-    protected void onPostExecute(Result result) {
-        if (result != null && mCallback != null) {
-            mCallback.onApiResponse(result);
-        }
-    }
+        return apiResult;
+    }*/
 }

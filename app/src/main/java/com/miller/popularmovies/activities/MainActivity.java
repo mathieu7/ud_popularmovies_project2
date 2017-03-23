@@ -9,6 +9,8 @@ import android.provider.Settings;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ActivityOptionsCompat;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
@@ -24,21 +26,20 @@ import android.widget.TextView;
 
 import com.miller.popularmovies.R;
 import com.miller.popularmovies.adapters.MovieAdapter;
-import com.miller.popularmovies.http.MovieDBApiCallback;
-import com.miller.popularmovies.http.MovieDBAsyncTask;
+import com.miller.popularmovies.api.MovieDBApiClient;
+import com.miller.popularmovies.loader.MovieListLoader;
 import com.miller.popularmovies.models.MovieList;
 import com.miller.popularmovies.models.Movie;
 import com.miller.popularmovies.models.MoviePreference;
-import com.miller.popularmovies.utils.ApiUtils;
 import com.miller.popularmovies.utils.EndlessRecyclerViewScrollListener;
 import com.miller.popularmovies.utils.NetworkUtils;
 
 import java.util.ArrayList;
-
 import static android.net.ConnectivityManager.CONNECTIVITY_ACTION;
+import static com.miller.popularmovies.api.MovieDBApiClient.*;
 
-public class MainActivity extends AppCompatActivity implements MovieDBApiCallback,
-        MovieAdapter.OnMovieClickedListener {
+public class MainActivity extends AppCompatActivity
+        implements LoaderManager.LoaderCallbacks<ApiResult<MovieList>>, MovieAdapter.OnMovieClickedListener {
     public static final String MOVIE_INTENT_EXTRA_KEY = "movie";
     private static final String POSTER_TRANSITION_KEY = "moviePosterTransition";
     private static final int NUMBER_OF_SPANS = 2;
@@ -47,12 +48,41 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
     private GridLayoutManager mLayoutManager;
     private MovieList mPreviousMovieList;
     private MoviePreference mMoviePreference = MoviePreference.MOST_POPULAR;
-    private MovieDBAsyncTask mTask;
     private View mLoadingDialog;
     private ProgressBar mProgressBar;
     private boolean isNetworkConnected;
-    private boolean mIsLoading;
     private boolean mIsContentLoaded;
+
+    @Override
+    public Loader<ApiResult<MovieList>> onCreateLoader(int id, Bundle args) {
+        return new MovieListLoader(this, mMoviePreference);
+    }
+
+
+    @Override
+    public void onLoadFinished(Loader<ApiResult<MovieList>> loader, ApiResult<MovieList> data) {
+        if (data.mResponse != null) {
+            ArrayList<Movie> movies = (ArrayList<Movie>) data.mResponse.getResults();
+            mIsContentLoaded = true;
+            hideLoadingDialog();
+            if (mMovieAdapter == null) {
+                mMovieAdapter = new MovieAdapter(movies, this);
+                mMovieGridRecyclerView.setAdapter(mMovieAdapter);
+            } else {
+                mMovieAdapter.addItems(movies);
+
+            }
+            mPreviousMovieList = data.mResponse;
+        } else if (data.mException != null) {
+            displayErrorState(data.mException.getMessage());
+        }
+    }
+
+    @Override
+    public void onLoaderReset(Loader<ApiResult<MovieList>> loader) {
+        mMovieAdapter.clear();
+        displayLoadingDialog(true);
+    }
 
     /**
      * Broadcast Receiver to track network connectivity changes.
@@ -117,10 +147,6 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
     protected void onStop() {
         super.onStop();
         unregisterReceiver(mConnectivityReceiver);
-        if (mTask != null) {
-            mTask.cancel(true);
-            mTask = null;
-        }
     }
 
     /**
@@ -133,13 +159,7 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         if (pageToLoad > mPreviousMovieList.getTotalPages()) return;
 
         Log.d(MainActivity.class.getName(), "loading page: "+ pageToLoad);
-        if (mTask != null) {
-            mTask.cancel(true);
-            mTask = null;
-        }
-        mTask = new MovieDBAsyncTask(this);
-        mTask.execute(ApiUtils.buildUriString(mMoviePreference, this, pageToLoad));
-        mIsLoading = true;
+        //TODO: restart loader with page info
     }
 
     private void load() {
@@ -151,9 +171,11 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         if (!NetworkUtils.isConnected(this)) {
             displayNoNetworkState();
         } else {
-            mTask = new MovieDBAsyncTask(this);
-            mTask.execute(ApiUtils.buildUriString(mMoviePreference, this));
-            mIsLoading = true;
+            if (getSupportLoaderManager().getLoader(0) != null) {
+                getSupportLoaderManager().restartLoader(0, null, this);
+            } else {
+                getSupportLoaderManager().initLoader(0, null, this);
+            }
         }
     }
 
@@ -192,6 +214,7 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         if (mMovieAdapter != null && mMovieAdapter.getMovies() != null) {
             savedInstanceState.putParcelableArrayList("currentMovies", mMovieAdapter.getMovies());
         }
+        savedInstanceState.putBoolean("contentLoaded", mIsContentLoaded);
         savedInstanceState.putSerializable("currentPreference", mMoviePreference);
         savedInstanceState.putParcelable("recyclerViewState", mLayoutManager.onSaveInstanceState());
         savedInstanceState.putParcelable("previousApiResponse", mPreviousMovieList);
@@ -202,6 +225,7 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         super.onRestoreInstanceState(savedInstanceState);
         if (savedInstanceState != null) {
             mMoviePreference = (MoviePreference) savedInstanceState.getSerializable("currentPreference");
+            mIsContentLoaded = savedInstanceState.getBoolean("contentLoaded");
             ArrayList<Movie> savedMovieList = savedInstanceState.getParcelableArrayList("currentMovies");
             mPreviousMovieList = savedInstanceState.getParcelable("previousApiResponse");
 
@@ -211,31 +235,6 @@ public class MainActivity extends AppCompatActivity implements MovieDBApiCallbac
         }
     }
 
-    /**
-     * Callback triggered from a call to the Movie DB Api.
-     * Display the movies or update the current adapter.
-     *
-     * @param result
-     */
-    @Override
-    public void onApiResponse(MovieDBAsyncTask.Result result) {
-        mIsLoading = false;
-        if (result.mResponse != null) {
-            mIsContentLoaded = true;
-            hideLoadingDialog();
-            ArrayList<Movie> results = (ArrayList<Movie>) result.mResponse.getResults();
-            if (mMovieAdapter == null) {
-                mMovieAdapter = new MovieAdapter(results, this);
-                mMovieGridRecyclerView.setAdapter(mMovieAdapter);
-            } else {
-                mMovieAdapter.addItems(results);
-
-            }
-            mPreviousMovieList = result.mResponse;
-        } else if (result.mException != null) {
-            displayErrorState(result.mException.getMessage());
-        }
-    }
 
     private void displayErrorState(final String error) {
         TextView errorView = (TextView) findViewById(R.id.error_text_view);

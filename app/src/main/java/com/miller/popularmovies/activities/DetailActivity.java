@@ -11,8 +11,11 @@ import android.view.View;
 
 import com.miller.popularmovies.R;
 import com.miller.popularmovies.models.Movie;
+import com.miller.popularmovies.models.Video;
+import com.miller.popularmovies.utils.VideoUtils;
 
-public class DetailActivity extends AppCompatActivity implements View.OnClickListener {
+public class DetailActivity extends AppCompatActivity implements View.OnClickListener,
+ DetailFragment.Listener {
     private Toolbar mToolbar;
     private String mMovieTitle;
     private FloatingActionButton mFavoriteFAB;
@@ -67,4 +70,8 @@ public class DetailActivity extends AppCompatActivity implements View.OnClickLis
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public void onTrailerClicked(Video video) {
+        VideoUtils.openYouTubeTrailer(video, this);
+    }
 }

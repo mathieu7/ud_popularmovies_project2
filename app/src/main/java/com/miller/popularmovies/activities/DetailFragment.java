@@ -6,6 +6,9 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,14 +17,32 @@ import android.widget.RatingBar;
 import android.widget.TextView;
 
 import com.miller.popularmovies.R;
+import com.miller.popularmovies.adapters.TrailerAdapter;
+import com.miller.popularmovies.loader.MovieDBApiLoader;
 import com.miller.popularmovies.models.Movie;
+import com.miller.popularmovies.models.MovieVideos;
+import com.miller.popularmovies.models.Video;
 import com.miller.popularmovies.utils.ImageUtils;
 
-public class DetailFragment extends Fragment {
+import java.util.ArrayList;
+
+public class DetailFragment extends Fragment implements LoaderManager.LoaderCallbacks<MovieVideos> {
     private static final String MOVIE_PARAM = "movie";
+
+    /**
+     * The Movie this fragment is displaying details for.
+     */
     private Movie mMovie;
 
-    private OnFragmentInteractionListener mListener;
+    /**
+     * Whether or not the movie has trailers to display.
+     */
+    private boolean mHasTrailers;
+
+    /**
+     * Our observer
+     */
+    private Listener mListener;
 
     public DetailFragment() {
         // Required empty public constructor
@@ -53,6 +74,9 @@ public class DetailFragment extends Fragment {
     private ImageView mPosterView;
     private RatingBar mRating;
     private TextView mTitleView, mReleaseView, mSummaryView;
+    private RecyclerView mTrailerRecyclerView;
+
+    private TrailerAdapter mTrailerAdapter;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -69,24 +93,28 @@ public class DetailFragment extends Fragment {
         mRating.setRating(mMovie.getVoteAverage().floatValue() / 2);
 
         ImageUtils.setMoviePoster(mMovie.getPosterPath(), getContext(), mPosterView);
+
+        mHasTrailers = mMovie.getVideo();
         return view;
     }
 
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onFragmentInteraction(uri);
-        }
+    /**
+     * Initialize loader for downloading movie trailers, if possible.
+     */
+    private void displayTrailers() {
+        if (!mHasTrailers) return;
+        getLoaderManager().initLoader(LOADER_ID, null, this);
     }
 
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        /*if (context instanceof OnFragmentInteractionListener) {
-            mListener = (OnFragmentInteractionListener) context;
+        if (context instanceof Listener) {
+            mListener = (Listener) context;
         } else {
             throw new RuntimeException(context.toString()
-                    + " must implement OnFragmentInteractionListener");
-        }*/
+                    + " must implement DetailFragment.Listener");
+        }
     }
 
     @Override
@@ -95,17 +123,26 @@ public class DetailFragment extends Fragment {
         mListener = null;
     }
 
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     * <p>
-     * See the Android Training lesson <a href=
-     * "http://developer.android.com/training/basics/fragments/communicating.html"
-     * >Communicating with Other Fragments</a> for more information.
-     */
-    public interface OnFragmentInteractionListener {
-        void onFragmentInteraction(Uri uri);
+    public interface Listener {
+        void onTrailerClicked(Video video);
+    }
+
+    private static final int LOADER_ID = 1;
+
+    @Override
+    public Loader<MovieVideos> onCreateLoader(int id, Bundle args) {
+        return null;
+        //return new MovieDBApiLoader(getActivity());
+    }
+
+    @Override
+    public void onLoadFinished(Loader<MovieVideos> loader, MovieVideos data) {
+        ArrayList<Video> videos = (ArrayList<Video>) data.getResults();
+        mTrailerAdapter.setData(videos);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<MovieVideos> loader) {
+        mTrailerAdapter.setData(null);
     }
 }

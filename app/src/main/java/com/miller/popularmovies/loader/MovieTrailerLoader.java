@@ -5,11 +5,11 @@ import com.miller.popularmovies.api.MovieDBApiClient;
 import com.miller.popularmovies.models.MovieList;
 import com.miller.popularmovies.models.MoviePreference;
 
-public class MovieListLoader extends MovieDBApiLoader<MovieList> {
+public class MovieTrailerLoader extends MovieDBApiLoader<MovieList> {
     private String mUrl;
     private MovieDBApiClient mClient;
 
-    public MovieListLoader(Context context, MoviePreference preference) {
+    public MovieTrailerLoader(Context context, MoviePreference preference) {
         super(context);
         mUrl = MovieDBApiClient.buildUriString(preference, context);
         mClient = new MovieDBApiClient();

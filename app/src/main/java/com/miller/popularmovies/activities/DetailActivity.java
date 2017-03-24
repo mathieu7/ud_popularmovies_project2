@@ -1,5 +1,8 @@
 package com.miller.popularmovies.activities;
 
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.FragmentManager;
@@ -12,19 +15,65 @@ import android.view.View;
 import com.miller.popularmovies.R;
 import com.miller.popularmovies.models.Movie;
 import com.miller.popularmovies.models.Video;
+import com.miller.popularmovies.providers.MovieFavoritesContract;
 import com.miller.popularmovies.utils.VideoUtils;
 
-public class DetailActivity extends AppCompatActivity implements View.OnClickListener,
- DetailFragment.Listener {
+public class DetailActivity extends AppCompatActivity implements View.OnClickListener, DetailFragment.Listener {
     private Toolbar mToolbar;
+    private Movie  mMovie;
     private String mMovieTitle;
     private FloatingActionButton mFavoriteFAB;
+    private boolean mIsFavorite = false;
 
     @Override
     public void onClick(View v) {
         if (v == mFavoriteFAB) {
-            //TODO: implement
+           toggleFavorite();
         }
+    }
+
+    /**
+     * Do a query to the MovieFavoriteContentProvider to see if the current movie is already a favorite.
+     */
+    private void loadFavorite() {
+        String selectionClause = MovieFavoritesContract.MovieFavoriteEntry.COLUMN_MOVIE_ID + " = ?";
+        String[] selectionArgs = { String.valueOf(mMovie.getId()) };
+        Cursor cursor = getContentResolver().query(MovieFavoritesContract.MovieFavoriteEntry.CONTENT_URI,
+                null, selectionClause, selectionArgs, null);
+        if (cursor == null) {
+            //TODO: notify user of error
+        } else if (cursor.getCount() > 0) {
+            mIsFavorite = true;
+            cursor.close();
+        }
+    }
+
+    /**
+     * Method to add or remove a movie from favorites.
+     */
+    private void toggleFavorite() {
+        if (mIsFavorite) {
+            ContentValues values = new ContentValues();
+            String whereClause = MovieFavoritesContract.MovieFavoriteEntry.COLUMN_MOVIE_ID + " = ?";
+            String[] selectionArgs = { String.valueOf(mMovie.getId()) };
+            int deleted = getContentResolver().delete(MovieFavoritesContract.MovieFavoriteEntry.CONTENT_URI,
+                    whereClause, selectionArgs);
+            if (deleted != 0) {
+                //TODO: notify the user, toggle.
+                mIsFavorite = false;
+            }
+        } else {
+            ContentValues values = new ContentValues();
+            values.put(MovieFavoritesContract.MovieFavoriteEntry.COLUMN_MOVIE_ID, mMovie.getId());
+            values.put(MovieFavoritesContract.MovieFavoriteEntry.COLUMN_MOVIE_TITLE, mMovie.getTitle());
+            Uri insertedUri = getContentResolver().insert(MovieFavoritesContract.MovieFavoriteEntry.CONTENT_URI,
+                    values);
+            if (insertedUri != null) {
+                //TODO: notify the user, toggle
+                mIsFavorite = true;
+            }
+        }
+
     }
 
     @Override
@@ -35,12 +84,12 @@ public class DetailActivity extends AppCompatActivity implements View.OnClickLis
         setSupportActionBar(toolbar);
 
         if (getIntent().hasExtra(MainActivity.MOVIE_INTENT_EXTRA_KEY)) {
-            Movie movie = getIntent().getParcelableExtra(MainActivity.MOVIE_INTENT_EXTRA_KEY);
-            mMovieTitle = movie.getTitle();
+            mMovie = getIntent().getParcelableExtra(MainActivity.MOVIE_INTENT_EXTRA_KEY);
+            mMovieTitle = mMovie.getTitle();
             FragmentManager fragmentManager = getSupportFragmentManager();
             FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 
-            DetailFragment fragment = DetailFragment.newInstance(movie);
+            DetailFragment fragment = DetailFragment.newInstance(mMovie);
             fragmentTransaction.add(R.id.detail_container, fragment).commit();
         } else {
             finish();

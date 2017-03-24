@@ -71,18 +71,24 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
-        <TextView
-            android:layout_marginTop="16dp"
+        <LinearLayout
+            android:id="@+id/trailer_layout"
+            android:orientation="vertical"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            style="@style/TextAppearance.AppCompat.Body2"
-            android:text="Trailers:" />
+            android:layout_height="wrap_content">
+            <TextView
+                android:layout_marginTop="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.AppCompat.Body2"
+                android:text="Trailers:" />
 
-        <android.support.v7.widget.RecyclerView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:id="@+id/movie_detail_trailer_recyclerview"
-            />
+            <android.support.v7.widget.RecyclerView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/movie_detail_trailer_recyclerview" />
+        </LinearLayout>
+
     </LinearLayout>
 
 </ScrollView>

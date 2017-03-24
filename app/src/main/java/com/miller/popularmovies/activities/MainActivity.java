@@ -27,7 +27,7 @@ import android.widget.TextView;
 import com.miller.popularmovies.R;
 import com.miller.popularmovies.adapters.MovieAdapter;
 import com.miller.popularmovies.api.MovieDBApiClient;
-import com.miller.popularmovies.loader.MovieListLoader;
+import com.miller.popularmovies.loader.MovieDBApiLoader;
 import com.miller.popularmovies.models.MovieList;
 import com.miller.popularmovies.models.Movie;
 import com.miller.popularmovies.models.MoviePreference;
@@ -39,7 +39,7 @@ import static android.net.ConnectivityManager.CONNECTIVITY_ACTION;
 import static com.miller.popularmovies.api.MovieDBApiClient.*;
 
 public class MainActivity extends AppCompatActivity
-        implements LoaderManager.LoaderCallbacks<ApiResult<MovieList>>, MovieAdapter.OnMovieClickedListener {
+        implements LoaderManager.LoaderCallbacks<Result<MovieList>>, MovieAdapter.OnMovieClickedListener {
     public static final String MOVIE_INTENT_EXTRA_KEY = "movie";
     private static final String POSTER_TRANSITION_KEY = "moviePosterTransition";
     private static final int NUMBER_OF_SPANS = 2;
@@ -54,13 +54,18 @@ public class MainActivity extends AppCompatActivity
     private boolean mIsContentLoaded;
 
     @Override
-    public Loader<ApiResult<MovieList>> onCreateLoader(int id, Bundle args) {
-        return new MovieListLoader(this, mMoviePreference);
+    public Loader<Result<MovieList>> onCreateLoader(int id, Bundle args) {
+        /*if (args != null && args.getInt("page") != 0) {
+            final int page = args.getInt("page");
+            return new MovieDBApiLoader();
+        }*/
+        PopularRequest request = new PopularRequest(this);
+        return new MovieDBApiLoader<>(request, this);
     }
 
 
     @Override
-    public void onLoadFinished(Loader<ApiResult<MovieList>> loader, ApiResult<MovieList> data) {
+    public void onLoadFinished(Loader<Result<MovieList>> loader, Result<MovieList> data) {
         if (data.mResponse != null) {
             ArrayList<Movie> movies = (ArrayList<Movie>) data.mResponse.getResults();
             mIsContentLoaded = true;
@@ -79,7 +84,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void onLoaderReset(Loader<ApiResult<MovieList>> loader) {
+    public void onLoaderReset(Loader<Result<MovieList>> loader) {
         mMovieAdapter.clear();
         displayLoadingDialog(true);
     }
@@ -159,7 +164,9 @@ public class MainActivity extends AppCompatActivity
         if (pageToLoad > mPreviousMovieList.getTotalPages()) return;
 
         Log.d(MainActivity.class.getName(), "loading page: "+ pageToLoad);
-        //TODO: restart loader with page info
+        Bundle args = new Bundle();
+        args.putInt("page", pageToLoad);
+        getSupportLoaderManager().restartLoader(0, args, this);
     }
 
     private void load() {

@@ -8,6 +8,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +19,7 @@ import android.widget.TextView;
 
 import com.miller.popularmovies.R;
 import com.miller.popularmovies.adapters.TrailerAdapter;
+import com.miller.popularmovies.api.MovieDBApiClient;
 import com.miller.popularmovies.loader.MovieDBApiLoader;
 import com.miller.popularmovies.models.Movie;
 import com.miller.popularmovies.models.MovieVideos;
@@ -26,7 +28,8 @@ import com.miller.popularmovies.utils.ImageUtils;
 
 import java.util.ArrayList;
 
-public class DetailFragment extends Fragment implements LoaderManager.LoaderCallbacks<MovieVideos> {
+public class DetailFragment extends Fragment implements LoaderManager.LoaderCallbacks<MovieDBApiClient.Result<MovieVideos>>,
+TrailerAdapter.OnVideoClickedListener {
     private static final String MOVIE_PARAM = "movie";
 
     /**
@@ -94,15 +97,25 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
 
         ImageUtils.setMoviePoster(mMovie.getPosterPath(), getContext(), mPosterView);
 
+        mTrailerRecyclerView = (RecyclerView) view.findViewById(R.id.movie_detail_trailer_recyclerview);
+        mTrailerRecyclerView.setHasFixedSize(true);
+        mTrailerRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+
         mHasTrailers = mMovie.getVideo();
         return view;
+    }
+
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        displayTrailers();
     }
 
     /**
      * Initialize loader for downloading movie trailers, if possible.
      */
     private void displayTrailers() {
-        if (!mHasTrailers) return;
+        //if (!mHasTrailers) return;
         getLoaderManager().initLoader(LOADER_ID, null, this);
     }
 
@@ -123,6 +136,13 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
         mListener = null;
     }
 
+    @Override
+    public void onVideoClicked(Video video) {
+        if (mListener != null) {
+            mListener.onTrailerClicked(video);
+        }
+    }
+
     public interface Listener {
         void onTrailerClicked(Video video);
     }
@@ -130,19 +150,22 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     private static final int LOADER_ID = 1;
 
     @Override
-    public Loader<MovieVideos> onCreateLoader(int id, Bundle args) {
-        return null;
-        //return new MovieDBApiLoader(getActivity());
+    public Loader<MovieDBApiClient.Result<MovieVideos>> onCreateLoader(int id, Bundle args) {
+        MovieDBApiClient.VideoRequest request = new MovieDBApiClient.VideoRequest(mMovie, getActivity());
+        return new MovieDBApiLoader<>(request, getContext());
     }
 
     @Override
-    public void onLoadFinished(Loader<MovieVideos> loader, MovieVideos data) {
-        ArrayList<Video> videos = (ArrayList<Video>) data.getResults();
-        mTrailerAdapter.setData(videos);
+    public void onLoadFinished(Loader<MovieDBApiClient.Result<MovieVideos>> loader, MovieDBApiClient.Result<MovieVideos> data) {
+        if (data.mResponse != null) {
+            ArrayList<Video> videos = (ArrayList<Video>) data.mResponse.getResults();
+            mTrailerAdapter = new TrailerAdapter(videos, this);
+            mTrailerRecyclerView.setAdapter(mTrailerAdapter);
+        }
     }
 
     @Override
-    public void onLoaderReset(Loader<MovieVideos> loader) {
-        mTrailerAdapter.setData(null);
+    public void onLoaderReset(Loader<MovieDBApiClient.Result<MovieVideos>> loader) {
+        if (mTrailerAdapter != null) mTrailerAdapter.setData(null);
     }
 }

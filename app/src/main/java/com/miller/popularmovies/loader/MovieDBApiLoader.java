@@ -1,5 +1,6 @@
 package com.miller.popularmovies.loader;
 
+
 import android.content.Context;
 import android.support.v4.content.AsyncTaskLoader;
 
@@ -8,14 +9,15 @@ import com.miller.popularmovies.api.MovieDBApiClient;
 import java.util.ArrayList;
 import java.util.List;
 
-
-public abstract class MovieDBApiLoader<T> extends AsyncTaskLoader<MovieDBApiClient.ApiResult<T>> {
+public class MovieDBApiLoader<T> extends AsyncTaskLoader<MovieDBApiClient.Result<T>> {
     private List<T> mData;
-    private MovieDBApiClient.ApiResult<T> mLastResponse;
+    private MovieDBApiClient.Result<T> mLastResponse;
     protected int mCurrentPage, mTotalPages, mItemsPerPage;
+    private MovieDBApiClient.Request<T> mRequest;
 
-    public MovieDBApiLoader(Context context) {
+    public MovieDBApiLoader(MovieDBApiClient.Request<T> request, Context context) {
         super(context);
+        mRequest = request;
         init();
     }
 
@@ -29,10 +31,13 @@ public abstract class MovieDBApiLoader<T> extends AsyncTaskLoader<MovieDBApiClie
     }
 
     @Override
-    public abstract MovieDBApiClient.ApiResult<T> loadInBackground();
+    public MovieDBApiClient.Result<T> loadInBackground() {
+        MovieDBApiClient client = new MovieDBApiClient();
+        return client.makeRequest(mRequest);
+    }
 
     @Override
-    public void deliverResult(MovieDBApiClient.ApiResult<T> data) {
+    public void deliverResult(MovieDBApiClient.Result<T> data) {
         if (data != null) {
             if (mData == null)
                 mData = new ArrayList<T>();

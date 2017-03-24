@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
@@ -19,7 +20,6 @@ import com.miller.popularmovies.providers.MovieFavoritesContract;
 import com.miller.popularmovies.utils.VideoUtils;
 
 public class DetailActivity extends AppCompatActivity implements View.OnClickListener, DetailFragment.Listener {
-    private Toolbar mToolbar;
     private Movie  mMovie;
     private String mMovieTitle;
     private FloatingActionButton mFavoriteFAB;
@@ -40,10 +40,10 @@ public class DetailActivity extends AppCompatActivity implements View.OnClickLis
         String[] selectionArgs = { String.valueOf(mMovie.getId()) };
         Cursor cursor = getContentResolver().query(MovieFavoritesContract.MovieFavoriteEntry.CONTENT_URI,
                 null, selectionClause, selectionArgs, null);
-        if (cursor == null) {
-            //TODO: notify user of error
-        } else if (cursor.getCount() > 0) {
+        if (cursor == null) return;
+        if (cursor.getCount() > 0) {
             mIsFavorite = true;
+            mFavoriteFAB.setImageResource(R.drawable.ic_favorite_filled);
             cursor.close();
         }
     }
@@ -53,13 +53,13 @@ public class DetailActivity extends AppCompatActivity implements View.OnClickLis
      */
     private void toggleFavorite() {
         if (mIsFavorite) {
-            ContentValues values = new ContentValues();
-            String whereClause = MovieFavoritesContract.MovieFavoriteEntry.COLUMN_MOVIE_ID + " = ?";
-            String[] selectionArgs = { String.valueOf(mMovie.getId()) };
-            int deleted = getContentResolver().delete(MovieFavoritesContract.MovieFavoriteEntry.CONTENT_URI,
-                    whereClause, selectionArgs);
+            Uri uri = MovieFavoritesContract.MovieFavoriteEntry.getResourceUri(mMovie);
+            int deleted = getContentResolver().delete(uri, null, null);
             if (deleted != 0) {
-                //TODO: notify the user, toggle.
+                Snackbar.make(mFavoriteFAB,
+                        getString(R.string.snackbar_not_favorited, mMovie.getTitle()),
+                        Snackbar.LENGTH_SHORT).show();
+                mFavoriteFAB.setImageResource(R.drawable.ic_favorite_hollow);
                 mIsFavorite = false;
             }
         } else {
@@ -69,7 +69,8 @@ public class DetailActivity extends AppCompatActivity implements View.OnClickLis
             Uri insertedUri = getContentResolver().insert(MovieFavoritesContract.MovieFavoriteEntry.CONTENT_URI,
                     values);
             if (insertedUri != null) {
-                //TODO: notify the user, toggle
+                Snackbar.make(mFavoriteFAB, getString(R.string.snackbar_favorited, mMovie.getTitle()), Snackbar.LENGTH_SHORT).show();
+                mFavoriteFAB.setImageResource(R.drawable.ic_favorite_filled);
                 mIsFavorite = true;
             }
         }
@@ -85,33 +86,39 @@ public class DetailActivity extends AppCompatActivity implements View.OnClickLis
 
         if (getIntent().hasExtra(MainActivity.MOVIE_INTENT_EXTRA_KEY)) {
             mMovie = getIntent().getParcelableExtra(MainActivity.MOVIE_INTENT_EXTRA_KEY);
-            mMovieTitle = mMovie.getTitle();
-            FragmentManager fragmentManager = getSupportFragmentManager();
-            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-
-            DetailFragment fragment = DetailFragment.newInstance(mMovie);
-            fragmentTransaction.add(R.id.detail_container, fragment).commit();
-        } else {
-            finish();
         }
+        if (mMovie == null) {
+            finish();
+            return;
+        }
+        setupLayout();
+        loadFavorite();
+    }
+
+    private void setupLayout() {
+        mMovieTitle = mMovie.getTitle();
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+
+        DetailFragment fragment = DetailFragment.newInstance(mMovie);
+        fragmentTransaction.add(R.id.detail_container, fragment).commit();
         setupActionBar();
         mFavoriteFAB = (FloatingActionButton) findViewById(R.id.favorite_movie_fab);
         mFavoriteFAB.setOnClickListener(this);
     }
 
     private void setupActionBar() {
-        mToolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(mToolbar);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
-        mToolbar.setTitle(mMovieTitle);
+        toolbar.setTitle(mMovieTitle);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            // Respond to the action bar's Up/Home button
             case android.R.id.home:
                 supportFinishAfterTransition();
                 return true;

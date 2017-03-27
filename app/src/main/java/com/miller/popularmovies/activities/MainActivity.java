@@ -16,7 +16,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -26,7 +25,6 @@ import android.widget.TextView;
 
 import com.miller.popularmovies.R;
 import com.miller.popularmovies.adapters.MovieAdapter;
-import com.miller.popularmovies.api.MovieDBApiClient;
 import com.miller.popularmovies.loader.MovieDBApiLoader;
 import com.miller.popularmovies.models.MovieList;
 import com.miller.popularmovies.models.Movie;
@@ -35,6 +33,7 @@ import com.miller.popularmovies.utils.EndlessRecyclerViewScrollListener;
 import com.miller.popularmovies.utils.NetworkUtils;
 
 import java.util.ArrayList;
+
 import static android.net.ConnectivityManager.CONNECTIVITY_ACTION;
 import static com.miller.popularmovies.api.MovieDBApiClient.*;
 
@@ -55,14 +54,10 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public Loader<Result<MovieList>> onCreateLoader(int id, Bundle args) {
-        /*if (args != null && args.getInt("page") != 0) {
-            final int page = args.getInt("page");
-            return new MovieDBApiLoader();
-        }*/
-        PopularRequest request = new PopularRequest(this);
+        PagedRequest<MovieList> request = (mMoviePreference == MoviePreference.TOP_RATED
+                ? new TopRatedRequest(this) : new PopularRequest(this));
         return new MovieDBApiLoader<>(request, this);
     }
-
 
     @Override
     public void onLoadFinished(Loader<Result<MovieList>> loader, Result<MovieList> data) {
@@ -75,9 +70,7 @@ public class MainActivity extends AppCompatActivity
                 mMovieGridRecyclerView.setAdapter(mMovieAdapter);
             } else {
                 mMovieAdapter.addItems(movies);
-
             }
-            mPreviousMovieList = data.mResponse;
         } else if (data.mException != null) {
             displayErrorState(data.mException.getMessage());
         }
@@ -151,7 +144,12 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onStop() {
         super.onStop();
-        unregisterReceiver(mConnectivityReceiver);
+        if (mConnectivityReceiver != null) {
+            try {
+                unregisterReceiver(mConnectivityReceiver);
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     /**
@@ -159,14 +157,7 @@ public class MainActivity extends AppCompatActivity
      * of the recyclerview.
      */
     private void loadMore() {
-        if (mPreviousMovieList == null) return;
-        final int pageToLoad = mPreviousMovieList.getPage() + 1;
-        if (pageToLoad > mPreviousMovieList.getTotalPages()) return;
-
-        Log.d(MainActivity.class.getName(), "loading page: "+ pageToLoad);
-        Bundle args = new Bundle();
-        args.putInt("page", pageToLoad);
-        getSupportLoaderManager().restartLoader(0, args, this);
+        getSupportLoaderManager().restartLoader(0, null, this);
     }
 
     private void load() {

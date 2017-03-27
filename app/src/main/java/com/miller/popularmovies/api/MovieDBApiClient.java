@@ -10,6 +10,7 @@ import com.miller.popularmovies.R;
 import com.miller.popularmovies.models.Movie;
 import com.miller.popularmovies.models.MovieList;
 import com.miller.popularmovies.models.MoviePreference;
+import com.miller.popularmovies.models.MovieReviews;
 import com.miller.popularmovies.models.MovieVideos;
 
 import java.io.BufferedReader;
@@ -68,6 +69,40 @@ public class MovieDBApiClient {
         return builder.build().toString();
     }
 
+    private static String createUrl(@NonNull final String endpoint,
+                                    @Nullable Movie movie,
+                                    @NonNull Context context,
+                                    final int page) {
+        Uri.Builder builder = Uri.parse(API_HOST)
+                .buildUpon()
+                .appendPath(API_VERSION)
+                .appendPath(API_PATH);
+
+        switch (endpoint) {
+            case POPULAR:
+                builder.appendPath(POPULAR);
+                break;
+            case TOP_RATED:
+                builder.appendPath(TOP_RATED);
+                break;
+            case VIDEOS:
+                if (movie == null)
+                    throw new IllegalArgumentException("Videos endpoint needs a Movie parameter");
+                builder.appendPath(String.valueOf(movie.getId())).appendPath(VIDEOS);
+                break;
+            case REVIEWS:
+                if (movie == null)
+                    throw new IllegalArgumentException("Reviews endpoint needs a Movie parameter");
+                builder.appendPath(String.valueOf(movie.getId())).appendPath(REVIEWS);
+        }
+
+        String apiKey = context.getString(R.string.API_KEY);
+        builder.appendQueryParameter(API_KEY_PARAM_NAME, apiKey);
+        if (page != 0)
+            builder.appendQueryParameter(PAGE_PARAM_NAME, String.valueOf(page));
+        return builder.build().toString();
+    }
+
     /**
      * API result wrapper passed back to UI Thread once the task is completed or cancelled.
      */
@@ -82,37 +117,50 @@ public class MovieDBApiClient {
         }
     }
 
+    //TODO: Make these builders.
     public abstract static class Request<T> {
-        public Class<T> classType;
-        protected String url;
-        protected String path;
+        Class<T> classType;
+        String url;
+        String path;
 
-        public String getUrl() {
+        String getUrl() {
             return url;
         }
     }
 
+    public abstract static class PagedRequest<T> extends Request<T> {
+        int page;
+    }
+
     public static class VideoRequest extends Request<MovieVideos> {
-        public VideoRequest(final Movie movie, final Context context) {
+        public VideoRequest(@NonNull final Movie movie, @NonNull final Context context) {
             path = VIDEOS;
             url = createUrl(path, movie, context);
             classType = MovieVideos.class;
         }
     }
 
-    public static class PopularRequest extends Request<MovieList> {
-        public PopularRequest(final Context context) {
+    public static class PopularRequest extends PagedRequest<MovieList> {
+        public PopularRequest(@NonNull final Context context) {
             path = POPULAR;
             url = createUrl(path, null, context);
             classType = MovieList.class;
         }
     }
 
-    public static class TopRatedRequest extends Request<MovieList> {
-        public TopRatedRequest(final Context context) {
+    public static class TopRatedRequest extends PagedRequest<MovieList> {
+        public TopRatedRequest(@NonNull final Context context) {
             path = POPULAR;
             url = createUrl(path, null, context);
             classType = MovieList.class;
+        }
+    }
+
+    public static class ReviewsRequest extends Request<MovieReviews> {
+        public ReviewsRequest(@NonNull final Movie movie, final Context context) {
+            path = REVIEWS;
+            url = createUrl(path, movie, context);
+            classType = MovieReviews.class;
         }
     }
 

@@ -215,7 +215,6 @@ public class MainActivity extends AppCompatActivity
         savedInstanceState.putBoolean("contentLoaded", mIsContentLoaded);
         savedInstanceState.putSerializable("currentPreference", mMoviePreference);
         savedInstanceState.putParcelable("recyclerViewState", mLayoutManager.onSaveInstanceState());
-        savedInstanceState.putParcelable("previousApiResponse", mPreviousMovieList);
         super.onSaveInstanceState(savedInstanceState);
     }
 
@@ -225,7 +224,6 @@ public class MainActivity extends AppCompatActivity
             mMoviePreference = (MoviePreference) savedInstanceState.getSerializable("currentPreference");
             mIsContentLoaded = savedInstanceState.getBoolean("contentLoaded");
             ArrayList<Movie> savedMovieList = savedInstanceState.getParcelableArrayList("currentMovies");
-            mPreviousMovieList = savedInstanceState.getParcelable("previousApiResponse");
 
             mMovieAdapter = new MovieAdapter(savedMovieList, this);
             mMovieGridRecyclerView.setAdapter(mMovieAdapter);

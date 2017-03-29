@@ -1,4 +1,4 @@
-package com.miller.popularmovies.activities;
+package com.miller.popularmovies.fragments;
 
 import android.content.Context;
 import android.os.Bundle;

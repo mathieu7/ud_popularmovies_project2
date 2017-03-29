@@ -14,6 +14,7 @@ import android.view.MenuItem;
 import android.view.View;
 
 import com.miller.popularmovies.R;
+import com.miller.popularmovies.fragments.DetailFragment;
 import com.miller.popularmovies.models.Movie;
 import com.miller.popularmovies.models.Video;
 import com.miller.popularmovies.providers.MovieFavoritesContract;

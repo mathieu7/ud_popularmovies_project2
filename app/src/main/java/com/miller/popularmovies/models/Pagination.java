@@ -8,7 +8,7 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
-class Pagination implements Parcelable {
+public class Pagination implements Parcelable {
 
     @SerializedName("page")
     @Expose

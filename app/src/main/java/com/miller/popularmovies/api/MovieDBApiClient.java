@@ -117,7 +117,6 @@ public class MovieDBApiClient {
         }
     }
 
-    //TODO: Make these builders.
     public abstract static class Request<T> {
         Class<T> classType;
         String url;
@@ -130,6 +129,10 @@ public class MovieDBApiClient {
 
     public abstract static class PagedRequest<T> extends Request<T> {
         int page;
+
+        PagedRequest(final int page) {
+            this.page = page;
+        }
     }
 
     public static class VideoRequest extends Request<MovieVideos> {
@@ -141,18 +144,60 @@ public class MovieDBApiClient {
     }
 
     public static class PopularRequest extends PagedRequest<MovieList> {
-        public PopularRequest(@NonNull final Context context) {
+        private PopularRequest(@NonNull final Context context) {
+            super(0);
             path = POPULAR;
             url = createUrl(path, null, context);
             classType = MovieList.class;
         }
+
+        public static class Builder {
+            private PopularRequest request;
+            private Context context;
+            public Builder(@NonNull final Context context) {
+                this.context = context;
+                request = new PopularRequest(context);
+            }
+
+            public Builder setPage(final int page) {
+                request.page = page;
+                request.url = createUrl(request.path, null, context, page);
+                return this;
+            }
+
+            public PopularRequest build() {
+                return request;
+            }
+        }
     }
 
+
     public static class TopRatedRequest extends PagedRequest<MovieList> {
-        public TopRatedRequest(@NonNull final Context context) {
+        private TopRatedRequest(@NonNull final Context context) {
+            super(0);
             path = POPULAR;
             url = createUrl(path, null, context);
             classType = MovieList.class;
+        }
+
+        public static class Builder {
+            private TopRatedRequest request;
+            private Context context;
+
+            public Builder(@NonNull final Context context) {
+                this.context = context;
+                request = new TopRatedRequest(context);
+            }
+
+            public Builder setPage(final int page) {
+                request.page = page;
+                request.url = createUrl(request.path, null, context, page);
+                return this;
+            }
+
+            public TopRatedRequest build() {
+                return request;
+            }
         }
     }
 

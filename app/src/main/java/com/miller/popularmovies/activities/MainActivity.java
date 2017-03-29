@@ -22,12 +22,13 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.miller.popularmovies.R;
 import com.miller.popularmovies.adapters.MovieAdapter;
 import com.miller.popularmovies.loader.MovieDBApiLoader;
-import com.miller.popularmovies.models.MovieList;
 import com.miller.popularmovies.models.Movie;
+import com.miller.popularmovies.models.MovieList;
 import com.miller.popularmovies.models.MoviePreference;
 import com.miller.popularmovies.utils.EndlessRecyclerViewScrollListener;
 import com.miller.popularmovies.utils.NetworkUtils;
@@ -35,7 +36,10 @@ import com.miller.popularmovies.utils.NetworkUtils;
 import java.util.ArrayList;
 
 import static android.net.ConnectivityManager.CONNECTIVITY_ACTION;
-import static com.miller.popularmovies.api.MovieDBApiClient.*;
+import static com.miller.popularmovies.api.MovieDBApiClient.PagedRequest;
+import static com.miller.popularmovies.api.MovieDBApiClient.PopularRequest;
+import static com.miller.popularmovies.api.MovieDBApiClient.Result;
+import static com.miller.popularmovies.api.MovieDBApiClient.TopRatedRequest;
 
 public class MainActivity extends AppCompatActivity
         implements LoaderManager.LoaderCallbacks<Result<MovieList>>, MovieAdapter.OnMovieClickedListener {
@@ -54,8 +58,22 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public Loader<Result<MovieList>> onCreateLoader(int id, Bundle args) {
-        PagedRequest<MovieList> request = (mMoviePreference == MoviePreference.TOP_RATED
-                ? new TopRatedRequest(this) : new PopularRequest(this));
+        PagedRequest<MovieList> request = null;
+        final int page = args != null ? args.getInt("page") : 0;
+        switch (mMoviePreference) {
+            case TOP_RATED:
+                TopRatedRequest.Builder topRatedBuilder = new TopRatedRequest.Builder(this);
+                if (page != 0)
+                    topRatedBuilder.setPage(page);
+                request = topRatedBuilder.build();
+                break;
+            case MOST_POPULAR:
+                PopularRequest.Builder popRequestBuilder = new PopularRequest.Builder(this);
+                if (page != 0)
+                    popRequestBuilder.setPage(page);
+                request = popRequestBuilder.build();
+                break;
+        }
         return new MovieDBApiLoader<>(request, this);
     }
 
@@ -157,7 +175,16 @@ public class MainActivity extends AppCompatActivity
      * of the recyclerview.
      */
     private void loadMore() {
-        getSupportLoaderManager().restartLoader(0, null, this);
+        int nextPage;
+        try {
+            nextPage = ((MovieDBApiLoader) getSupportLoaderManager().getLoader(0)).getNextPage();
+        } catch (Exception exception) {
+            Toast.makeText(this, "Cannot load more pages", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Bundle args = new Bundle();
+        args.putInt("page", nextPage);
+        getSupportLoaderManager().restartLoader(0, args, this);
     }
 
     private void load() {
@@ -203,6 +230,10 @@ public class MainActivity extends AppCompatActivity
                 mMoviePreference = MoviePreference.MOST_POPULAR;
                 load();
                 break;
+
+            case R.id.action_favorites:
+                startActivity(new Intent(this, FavoritesActivity.class));
+                break;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -231,7 +262,6 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-
     private void displayErrorState(final String error) {
         TextView errorView = (TextView) findViewById(R.id.error_text_view);
         errorView.setText(error);
@@ -256,11 +286,11 @@ public class MainActivity extends AppCompatActivity
         Snackbar snackbar = Snackbar.make(mLoadingDialog,
                 getString(R.string.snackbar_no_network), Snackbar.LENGTH_INDEFINITE);
         snackbar.setAction(getString(R.string.snackbar_action_enable), new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
-                    }
-                });
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
+            }
+        });
         snackbar.show();
     }
 

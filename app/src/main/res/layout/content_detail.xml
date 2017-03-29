@@ -9,7 +9,7 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:showIn="@layout/activity_detail"
-    tools:context="com.miller.popularmovies.activities.DetailFragment">
+    tools:context="com.miller.popularmovies.fragments.DetailFragment">
 
     <LinearLayout
         android:layout_width="match_parent"
